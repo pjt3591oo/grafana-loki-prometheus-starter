@@ -1,0 +1,14 @@
+{
+  "name": "observable-app",
+  "version": "1.0.0",
+  "description": "Simple Node.js server with Prometheus metrics and structured logging",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "prom-client": "^15.1.0",
+    "winston": "^3.14.0"
+  }
+}
