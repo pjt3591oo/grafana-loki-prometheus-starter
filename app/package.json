@@ -7,6 +7,10 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.52.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.54.0",
+    "@opentelemetry/sdk-node": "^0.54.0",
     "express": "^4.21.0",
     "prom-client": "^15.1.0",
     "winston": "^3.14.0"

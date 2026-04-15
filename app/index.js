@@ -1,6 +1,11 @@
+require('./tracing');
+
 const express = require('express');
 const client = require('prom-client');
 const winston = require('winston');
+const { trace, SpanStatusCode } = require('@opentelemetry/api');
+
+const tracer = trace.getTracer('observable-app');
 
 // Logger setup (JSON format for Promtail/Loki)
 const logger = winston.createLogger({
@@ -62,9 +67,53 @@ app.get('/slow', async (req, res) => {
   res.json({ message: 'Slow response', delay_ms: Math.round(delay) });
 });
 
-app.get('/error', (req, res) => {
-  logger.error('intentional error triggered');
-  res.status(500).json({ error: 'Something went wrong!' });
+// Service 계층 시뮬레이션 — 수동 계측 예시
+async function validateRequest(req) {
+  return tracer.startActiveSpan('ErrorService.validateRequest', async (span) => {
+    try {
+      span.setAttribute('request.path', req.path);
+      await new Promise((r) => setTimeout(r, 20));
+      span.setStatus({ code: SpanStatusCode.OK });
+      return true;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+// Repository 계층 시뮬레이션 — 의도적으로 실패시키는 수동 계측
+async function fetchFromDatabase() {
+  return tracer.startActiveSpan('ErrorRepository.fetchFromDatabase', async (span) => {
+    try {
+      span.setAttribute('db.system', 'simulated');
+      span.setAttribute('db.operation', 'SELECT');
+      await new Promise((r) => setTimeout(r, 30));
+      throw new Error('DB connection refused');
+    } catch (err) {
+      span.recordException(err);
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+app.get('/error', async (req, res) => {
+  await tracer.startActiveSpan('ErrorController.handle', async (rootSpan) => {
+    try {
+      await validateRequest(req);
+      await fetchFromDatabase();
+      res.json({ message: 'ok' });
+    } catch (err) {
+      rootSpan.recordException(err);
+      rootSpan.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+      logger.error('intentional error triggered', { error: err.message });
+      res.status(500).json({ error: 'Something went wrong!' });
+    } finally {
+      rootSpan.end();
+    }
+  });
 });
 
 // Prometheus metrics endpoint

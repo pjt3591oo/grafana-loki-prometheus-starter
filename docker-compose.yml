@@ -3,6 +3,9 @@ services:
     build: ./app
     ports:
       - "3000:3000"
+    environment:
+      - OTEL_SERVICE_NAME=observable-app
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
     labels:
       - "com.docker.compose.service=app"
     logging:
@@ -10,6 +13,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    depends_on:
+      - otel-collector
 
   prometheus:
     image: prom/prometheus:latest
@@ -35,6 +40,30 @@ services:
     depends_on:
       - loki
 
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: -config.file=/etc/tempo/tempo.yaml
+    ports:
+      - "3200:3200"   # Tempo query HTTP (Grafana에서 사용)
+    expose:
+      - "4317"        # OTLP gRPC (내부 네트워크에서 Collector만 사용)
+      - "4318"        # OTLP HTTP
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml
+      - tempo-data:/var/tempo
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.110.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "4318:4318"   # OTLP HTTP (앱이 여기로 push)
+      - "4317:4317"   # OTLP gRPC
+      - "13133:13133" # health_check (옵션)
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml
+    depends_on:
+      - tempo
+
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -49,3 +78,8 @@ services:
     depends_on:
       - prometheus
       - loki
+      - tempo
+      - otel-collector
+
+volumes:
+  tempo-data:
