@@ -189,10 +189,10 @@ AWS 리소스 ──▶ CloudWatch Logs ──▶ [수집기] ──▶ Loki
 - S3 = 대량 장기 보관 (저렴, 직접 쿼리 불가)
 - 필요 시 명시적 연결 (Export Task, Subscription → Firehose)
 
-#### LocalStack / MinIO
-- **LocalStack**: CloudWatch/S3 API 에뮬레이션, SDK 테스트 용도
+#### LocalStack(MiniStack) / MinIO
+- **LocalStack(MiniStack)**: CloudWatch/S3 API 에뮬레이션, SDK 테스트 용도
 - **MinIO**: S3 API 완벽 호환, 객체 저장소로서는 우수하지만 **AWS 생태계(Lambda/CloudWatch) 연동은 없음**
-- 실무 조합: LocalStack + MinIO 병행 (S3는 MinIO가 안정적)
+- 실무 조합: LocalStack(MiniStack) + MinIO 병행 (S3는 MinIO가 안정적)
 
 ### 5-3. Alloy vs Prometheus 오해
 
